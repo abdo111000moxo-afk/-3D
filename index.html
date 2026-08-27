@@ -1,0 +1,1001 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Real Highway 3D: Mobile Edition</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-touch-callout: none; }
+    body { overflow: hidden; background: #030712; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; touch-action: none; color: #f8fafc; }
+    #canvas-container { width: 100vw; height: 100vh; display: block; position: fixed; inset: 0; }
+
+    /* شاشات القوائم - Glassmorphism */
+    .overlay-screen {
+      position: fixed; inset: 0;
+      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.78) 0%, rgba(3, 7, 18, 0.96) 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 15px; z-index: 50; backdrop-filter: blur(16px); padding: 20px;
+    }
+
+    .main-title {
+      font-size: 36px; font-weight: 900; letter-spacing: 2px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8, #f59e0b);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-align: center; text-shadow: 0 10px 30px rgba(56, 189, 248, 0.3);
+      margin-bottom: 5px;
+    }
+
+    .header-gold-pill {
+      background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fbbf24; padding: 8px 22px; border-radius: 30px; font-size: 15px; font-weight: 800;
+      display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15);
+    }
+
+    .menu-btn {
+      width: 270px; padding: 14px 20px; font-size: 16px; font-weight: 800;
+      border-radius: 16px; border: none; cursor: pointer; transition: 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-start {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #ffffff; box-shadow: 0 8px 30px rgba(37, 99, 235, 0.4);
+    }
+    .btn-start:hover { transform: scale(1.03); }
+    .btn-nav-menu {
+      background: rgba(255, 255, 255, 0.05); color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.12); backdrop-filter: blur(10px);
+    }
+    .btn-nav-menu:hover { background: rgba(255, 255, 255, 0.12); border-color: #38bdf8; }
+
+    /* صالة العرض 3D */
+    .showroom-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(3, 7, 18, 0.98); z-index: 100;
+      flex-direction: column; align-items: center; justify-content: space-between;
+      padding: 20px; backdrop-filter: blur(30px);
+    }
+    .showroom-header { display: flex; justify-content: space-between; width: 100%; max-width: 900px; align-items: center; }
+    .showroom-title { font-size: 20px; font-weight: 900; color: #38bdf8; }
+    .showroom-viewport {
+      width: 100%; max-width: 850px; height: 48vh;
+      border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative; overflow: hidden; background: radial-gradient(circle at center, #1e293b 0%, #030712 100%);
+    }
+
+    .carousel-controls {
+      display: flex; align-items: center; justify-content: center; gap: 15px; width: 100%; max-width: 600px;
+    }
+    .arrow-btn {
+      width: 50px; height: 50px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff; font-size: 20px; font-weight: bold; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .arrow-btn:hover { background: #38bdf8; border-color: #38bdf8; color: #000; }
+
+    .item-info-card {
+      background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 12px 24px; border-radius: 18px; text-align: center; min-width: 240px;
+    }
+    .item-info-card h3 { font-size: 17px; color: #fff; margin-bottom: 4px; }
+    .item-info-card p { font-size: 13px; color: #94a3b8; }
+
+    .action-btn-pill {
+      padding: 9px 28px; font-size: 14px; font-weight: 800;
+      border-radius: 12px; border: none; cursor: pointer; margin-top: 8px; transition: 0.2s;
+    }
+    .btn-buy { background: #f59e0b; color: #000; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4); }
+    .btn-select { background: #38bdf8; color: #040d1a; }
+    .btn-active { background: #10b981; color: #fff; cursor: default; }
+
+    /* نافذة الإعدادات واختيار نوع التحكم */
+    #settings-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(3, 7, 18, 0.95); z-index: 110;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 20px; backdrop-filter: blur(25px); padding: 20px;
+    }
+    .settings-box {
+      background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 24px; border-radius: 24px; width: 100%; max-width: 380px;
+      display: flex; flex-direction: column; gap: 14px; text-align: center;
+    }
+    .control-option {
+      background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 14px; border-radius: 16px; cursor: pointer; transition: 0.2s;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .control-option.active { border-color: #38bdf8; background: rgba(56, 189, 248, 0.15); box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
+    .control-option span { font-weight: 800; font-size: 15px; }
+
+    /* عدادات السباق أثناء اللعب */
+    #hud {
+      display: none; position: fixed; inset: 0; pointer-events: none; z-index: 20;
+    }
+    .hud-top-left {
+      position: absolute; top: 20px; left: 20px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-top-right {
+      position: absolute; top: 20px; right: 20px;
+      display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+    }
+    .hud-badge {
+      background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px); padding: 8px 18px; border-radius: 14px;
+      font-size: 14px; font-weight: 800;
+    }
+    .hud-badge span { color: #38bdf8; font-size: 20px; }
+
+    /* دواسة التسارع */
+    .accel-container {
+      position: absolute; bottom: 25px; right: 25px; pointer-events: auto;
+    }
+    .accel-btn {
+      width: 85px; height: 85px; border-radius: 50%;
+      background: radial-gradient(circle, #0284c7 0%, #1e293b 100%);
+      border: 2px solid #38bdf8; color: #ffffff; font-size: 14px; font-weight: 900;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; box-shadow: 0 10px 30px rgba(2, 132, 199, 0.5); active: transform: scale(0.92);
+    }
+
+    /* 1. أزرار اللمس العادية */
+    #touch-buttons-ui {
+      display: none; position: absolute; bottom: 25px; left: 25px;
+      gap: 15px; pointer-events: auto;
+    }
+    .touch-btn {
+      width: 70px; height: 70px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff; font-size: 26px; font-weight: bold;
+      display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);
+    }
+
+    /* 2. دريكسيون القيادة التفاعلي */
+    #steering-wheel-ui {
+      display: none; position: absolute; bottom: 20px; left: 20px;
+      width: 120px; height: 120px; pointer-events: auto; touch-action: none;
+    }
+    .wheel-graphic {
+      width: 100%; height: 100%; border-radius: 50%;
+      border: 10px solid #475569; background: radial-gradient(circle, #1e293b 35%, #0f172a 100%);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6), inset 0 0 15px rgba(56, 189, 248, 0.3);
+      position: relative; display: flex; align-items: center; justify-content: center;
+      transition: transform 0.05s linear;
+    }
+    .wheel-spoke { position: absolute; width: 85%; height: 6px; background: #64748b; border-radius: 3px; }
+    .wheel-center { width: 34px; height: 34px; border-radius: 50%; background: #38bdf8; z-index: 2; box-shadow: 0 0 12px #38bdf8; }
+
+    /* 3. تنبيه الجيروسكوب / الإمالة */
+    #tilt-indicator {
+      display: none; position: absolute; bottom: 30px; left: 50%;
+      transform: translateX(-50%); background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #38bdf8; padding: 6px 16px; border-radius: 20px;
+      font-size: 13px; color: #38bdf8; font-weight: bold; pointer-events: none;
+    }
+
+    /* شاشة نهاية الدور */
+    #game-over-screen {
+      display: none; position: fixed; inset: 0;
+      background: rgba(3, 7, 18, 0.97); z-index: 120;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 18px; backdrop-filter: blur(25px); text-align: center; padding: 20px;
+    }
+    .result-card {
+      background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(239, 68, 68, 0.4);
+      padding: 24px 30px; border-radius: 24px; box-shadow: 0 15px 50px rgba(239, 68, 68, 0.25);
+      width: 100%; max-width: 330px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .result-card h2 { color: #f87171; font-size: 26px; font-weight: 900; }
+    .result-row { display: flex; justify-content: space-between; font-size: 15px; color: #94a3b8; }
+    .result-row b { color: #38bdf8; font-weight: 800; }
+    .gold-gained { color: #fbbf24 !important; font-size: 18px; }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+</head>
+<body>
+
+  <!-- القائمة الرئيسية -->
+  <div id="start-menu" class="overlay-screen">
+    <div class="header-gold-pill">
+      <span>رصيد الذهب:</span>
+      <b id="main-gold-display">0</b> 🪙
+    </div>
+    
+    <h1 class="main-title">REAL HIGHWAY 3D</h1>
+
+    <button class="menu-btn btn-start" onclick="startRaceGame()">⚡ انطلاق للسباق</button>
+    <button class="menu-btn btn-nav-menu" onclick="openShowroom('cars')">🏎️ صالة عرض السيارات</button>
+    <button class="menu-btn btn-nav-menu" onclick="openShowroom('maps')">🌍 عوالم وبيئات السباق (10)</button>
+    <button class="menu-btn btn-nav-menu" onclick="openSettings()">⚙️ إعدادات طريقة التحكم</button>
+  </div>
+
+  <!-- نافذة إعدادات طريقة التحكم -->
+  <div id="settings-modal">
+    <div class="settings-box">
+      <h2 style="color:#38bdf8; font-size:20px;">🎮 اختر طريقة التحكم</h2>
+      
+      <div class="control-option" id="ctrl-buttons" onclick="setControlMode('buttons')">
+        <span>🔘 أزرار اللمس (يمين / يسار)</span>
+        <b id="check-buttons">✓</b>
+      </div>
+
+      <div class="control-option" id="ctrl-tilt" onclick="setControlMode('tilt')">
+        <span>📱 إمالة الهاتف (جيروسكوب)</span>
+        <b id="check-tilt"></b>
+      </div>
+
+      <div class="control-option" id="ctrl-wheel" onclick="setControlMode('wheel')">
+        <span>🎯 عجلة القيادة (دريكسيون)</span>
+        <b id="check-wheel"></b>
+      </div>
+
+      <button onclick="closeSettings()" class="action-btn-pill btn-select" style="width:100%; margin-top:5px;">حفظ وتأكيد</button>
+    </div>
+  </div>
+
+  <!-- صالة العرض 3D -->
+  <div id="showroom-modal" class="showroom-modal">
+    <div class="showroom-header">
+      <div class="header-gold-pill">
+        <span>الذهب:</span> <b id="showroom-gold-display">0</b> 🪙
+      </div>
+      <h2 id="showroom-title" class="showroom-title">صالة العرض</h2>
+      <button onclick="closeShowroom()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:6px 18px; border-radius:12px; font-weight:bold; cursor:pointer;">خروج ✕</button>
+    </div>
+
+    <div id="showroom-viewport" class="showroom-viewport"></div>
+
+    <div class="carousel-controls">
+      <button class="arrow-btn" onclick="prevShowroomItem()">◀</button>
+      <div class="item-info-card" id="item-info-card"></div>
+      <button class="arrow-btn" onclick="nextShowroomItem()">▶</button>
+    </div>
+  </div>
+
+  <!-- لوحة عدادات السباق وأدوات التحكم -->
+  <div id="hud">
+    <div class="hud-top-left">
+      <div class="hud-badge">المسافة: <span id="hud-distance">0.00</span> كم</div>
+    </div>
+    <div class="hud-top-right">
+      <div class="hud-badge">السرعة: <span id="hud-speed">25</span> كم/س</div>
+    </div>
+
+    <!-- دواسة التسارع -->
+    <div class="accel-container">
+      <button class="accel-btn" id="accel-pedal" 
+        onmousedown="pressGas()" onmouseup="releaseGas()" 
+        ontouchstart="pressGas()" ontouchend="releaseGas()">
+        ▲ تسارع
+        <span style="font-size:11px; opacity:0.8; font-weight:bold;">GAS</span>
+      </button>
+    </div>
+
+    <!-- 1. أزرار اللمس -->
+    <div id="touch-buttons-ui">
+      <div class="touch-btn" onclick="moveLane(-1)">◀</div>
+      <div class="touch-btn" onclick="moveLane(1)">▶</div>
+    </div>
+
+    <!-- 2. عجلة القيادة (الدريكسيون) -->
+    <div id="steering-wheel-ui">
+      <div class="wheel-graphic" id="wheel-visual">
+        <div class="wheel-spoke"></div>
+        <div class="wheel-spoke" style="transform: rotate(90deg);"></div>
+        <div class="wheel-center"></div>
+      </div>
+    </div>
+
+    <!-- 3. مؤشر الإمالة -->
+    <div id="tilt-indicator">📱 أمِل الهاتف لليمين أو اليسار للتحكم</div>
+  </div>
+
+  <!-- شاشة نهاية الدور -->
+  <div id="game-over-screen">
+    <div class="result-card">
+      <h2>💥 نهاية السباق</h2>
+      <div class="result-row"><span>المسافة المقطوعة:</span> <b id="result-distance">0.00 كم</b></div>
+      <div class="result-row"><span>الذهب المكتسب:</span> <b class="gold-gained" id="result-gold">+0 🪙</b></div>
+      <hr style="border-color: rgba(255,255,255,0.1); margin: 6px 0;">
+      <div class="result-row"><span>أعلى مسافة مسجلة:</span> <b id="result-best">0.00 كم</b></div>
+      <div class="result-row"><span>الذهب الكلي الحالي:</span> <b id="result-total-gold">0 🪙</b></div>
+    </div>
+    <button class="menu-btn btn-start" style="width:100%; max-width:330px;" onclick="returnToMainMenu()">🏠 القائمة الرئيسية</button>
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <script>
+    const MIN_IDLE_SPEED = 25;
+
+    const CARS_DATABASE = [
+      { id: 'car1', name: 'السيارة الكلاسيكية', file: 'car1.glb', price: 0, maxSpeed: 110 },
+      { id: 'car3', name: 'سبيدستر GT توربو', file: 'car3.glb', price: 1000, maxSpeed: 190 },
+      { id: 'car4', name: 'فانتوم R الأسطورية 👑', file: 'car4.glb', price: 3000, maxSpeed: 280 }
+    ];
+
+    const MAPS_DATABASE = [
+      { id: 'map1', name: '1. طريق الغابة الليلي (أعمدة إنارة بيضاء)', price: 0, sky: 0x050b14, fog: 0x050b14, sunColor: 0xffffff, sunIntensity: 1.2, ambientColor: 0x1e293b, ambientIntensity: 1.0, hasOcean: false, grassColor: 0x142818, treeLeaves: 0x1e4620, hasLamps: true },
+      { id: 'map2', name: '2. الأوتوستراد الساحلي (أمواج وبحر)', price: 200, sky: 0x081b33, fog: 0x081b33, sunColor: 0x93c5fd, sunIntensity: 1.5, ambientColor: 0x0f2942, ambientIntensity: 1.2, hasOcean: true, oceanColor: 0x034078, grassColor: 0xd4a373, treeLeaves: 0x2d6a4f, hasLamps: true },
+      { id: 'map3', name: '3. صباح مشمس نقي', price: 500, sky: 0x7dd3fc, fog: 0xbae6fd, sunColor: 0xfffaed, sunIntensity: 2.5, ambientColor: 0xe0f2fe, ambientIntensity: 1.8, hasOcean: false, grassColor: 0x2d6a4f, treeLeaves: 0x40916c, hasLamps: true },
+      { id: 'map4', name: '4. طريق الغروب الذهبي', price: 900, sky: 0x431407, fog: 0x7c2d12, sunColor: 0xf97316, sunIntensity: 2.8, ambientColor: 0x9a3412, ambientIntensity: 1.5, hasOcean: true, oceanColor: 0x7c2d12, grassColor: 0x78350f, treeLeaves: 0x92400e, hasLamps: true },
+      { id: 'map5', name: '5. عاصفة جليدية ثلجية', price: 1400, sky: 0x334155, fog: 0x64748b, sunColor: 0xf8fafc, sunIntensity: 1.4, ambientColor: 0x94a3b8, ambientIntensity: 1.6, hasOcean: false, grassColor: 0xe2e8f0, treeLeaves: 0xf1f5f9, hasLamps: true },
+      { id: 'map6', name: '6. صحراء الوادي الأحمر', price: 2000, sky: 0x451a03, fog: 0x78350f, sunColor: 0xfbbf24, sunIntensity: 2.2, ambientColor: 0x92400e, ambientIntensity: 1.4, hasOcean: false, grassColor: 0xa16207, treeLeaves: 0xca8a04, hasLamps: false },
+      { id: 'map7', name: '7. طوكيو الليلية الحديثة', price: 2800, sky: 0x09090b, fog: 0x18181b, sunColor: 0x38bdf8, sunIntensity: 1.6, ambientColor: 0x27272a, ambientIntensity: 1.2, hasOcean: false, grassColor: 0x18181b, treeLeaves: 0x38bdf8, hasLamps: true },
+      { id: 'map8', name: '8. وادي الخريف الذهبي', price: 3800, sky: 0x312e81, fog: 0x4338ca, sunColor: 0xf59e0b, sunIntensity: 2.0, ambientColor: 0x4f46e5, ambientIntensity: 1.4, hasOcean: false, grassColor: 0x7c2d12, treeLeaves: 0xd97706, hasLamps: true },
+      { id: 'map9', name: '9. أوتوستراد المطر والضباب', price: 5000, sky: 0x0f172a, fog: 0x1e293b, sunColor: 0x94a3b8, sunIntensity: 1.0, ambientColor: 0x334155, ambientIntensity: 1.5, hasOcean: true, oceanColor: 0x0f172a, grassColor: 0x1e293b, treeLeaves: 0x334155, hasLamps: true },
+      { id: 'map10', name: '10. الشفق القطبي الساحر 🌌', price: 7500, sky: 0x022c22, fog: 0x064e3b, sunColor: 0x34d399, sunIntensity: 2.2, ambientColor: 0x047857, ambientIntensity: 1.6, hasOcean: true, oceanColor: 0x064e3b, grassColor: 0x064e3b, treeLeaves: 0x6ee7b7, hasLamps: true }
+    ];
+
+    const LANES = [-3.2, 0.0, 3.2];
+    let currentLane = 1;
+    let targetPlayerX = 0;
+
+    // نمط التحكم: 'buttons' أو 'tilt' أو 'wheel'
+    let controlMode = localStorage.getItem('rh_control_mode') || 'buttons';
+
+    let unlockedCars = JSON.parse(localStorage.getItem('rh_unlocked_cars')) || ['car1'];
+    let selectedCarId = localStorage.getItem('rh_selected_car') || 'car1';
+    let unlockedMaps = JSON.parse(localStorage.getItem('rh_unlocked_maps')) || ['map1'];
+    let selectedMapId = localStorage.getItem('rh_selected_map') || 'map1';
+
+    let totalCoins = parseInt(localStorage.getItem('rh_coins')) || 0;
+    let bestDistanceMeters = parseFloat(localStorage.getItem('rh_best_distance')) || 0;
+
+    function savePlayerData() {
+      localStorage.setItem('rh_unlocked_cars', JSON.stringify(unlockedCars));
+      localStorage.setItem('rh_selected_car', selectedCarId);
+      localStorage.setItem('rh_unlocked_maps', JSON.stringify(unlockedMaps));
+      localStorage.setItem('rh_selected_map', selectedMapId);
+      localStorage.setItem('rh_coins', totalCoins);
+      localStorage.setItem('rh_best_distance', bestDistanceMeters);
+      localStorage.setItem('rh_control_mode', controlMode);
+      document.getElementById('main-gold-display').innerText = totalCoins;
+      document.getElementById('showroom-gold-display').innerText = totalCoins;
+    }
+    savePlayerData();
+
+    let isGameRunning = false;
+    let isGameOver = false;
+    let isAccelerating = false;
+    let currentSpeed = MIN_IDLE_SPEED;
+    let raceDistanceMeters = 0;
+
+    // --- إعداد المشهد ثلاثي الأبعاد ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 2.6, 5.8);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.25;
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    const loader = new THREE.GLTFLoader();
+    const dracoLoader = new THREE.DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.3/');
+    loader.setDRACOLoader(dracoLoader);
+
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e293b, 1.2);
+    scene.add(hemiLight);
+    const mainSunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+    mainSunLight.position.set(20, 45, -50);
+    scene.add(mainSunLight);
+
+    function createRealisticRoadTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024; canvas.height = 1024;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#1c1e22';
+      ctx.fillRect(0, 0, 1024, 1024);
+
+      for (let i = 0; i < 25000; i++) {
+        const c = Math.floor(22 + Math.random() * 20);
+        ctx.fillStyle = `rgb(${c},${c},${c})`;
+        ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2);
+      }
+
+      ctx.fillStyle = '#ffffff';
+      for (let y = 0; y < 1024; y += 256) {
+        ctx.fillRect(336, y + 40, 14, 140);
+        ctx.fillRect(674, y + 40, 14, 140);
+      }
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(15, 0, 18, 1024);
+      ctx.fillRect(991, 0, 18, 1024);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(1, 16);
+      return tex;
+    }
+
+    const roadTexture = createRealisticRoadTexture();
+    const roadMesh = new THREE.Mesh(new THREE.PlaneGeometry(10.6, 600), new THREE.MeshStandardMaterial({ map: roadTexture, roughness: 0.8, metalness: 0.1 }));
+    roadMesh.rotation.x = -Math.PI / 2;
+    roadMesh.position.set(0, 0, -250);
+    scene.add(roadMesh);
+
+    let leftSideMesh, rightSideMesh;
+    const sceneryProps = [];
+    const lampPoleMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
+    const lampHeadMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    function createRealisticStreetLamp() {
+      const lamp = new THREE.Group();
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 7.5, 8), lampPoleMat);
+      pole.position.y = 3.75;
+      lamp.add(pole);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.0, 8), lampPoleMat);
+      arm.rotation.z = Math.PI / 3;
+      arm.position.set(0.8, 7.3, 0);
+      lamp.add(arm);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.8), lampHeadMat);
+      head.position.set(1.5, 7.7, 0);
+      lamp.add(head);
+      return lamp;
+    }
+
+    const treeTrunkMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.9 });
+    function createRealisticTree(leavesColor) {
+      const tree = new THREE.Group();
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.38, 3.5, 7), treeTrunkMat);
+      trunk.position.y = 1.75;
+      tree.add(trunk);
+      const leavesMat = new THREE.MeshStandardMaterial({ color: leavesColor, roughness: 0.7 });
+      for (let i = 0; i < 3; i++) {
+        const foliage = new THREE.Mesh(new THREE.ConeGeometry(2.0 - i * 0.45, 2.8, 7), leavesMat);
+        foliage.position.y = 3.2 + i * 1.5;
+        tree.add(foliage);
+      }
+      return tree;
+    }
+
+    function applyMapEnvironment(mapId) {
+      const map = MAPS_DATABASE.find(m => m.id === mapId) || MAPS_DATABASE[0];
+      scene.background = new THREE.Color(map.sky);
+      scene.fog = new THREE.FogExp2(map.fog, 0.0055);
+
+      hemiLight.color.setHex(map.ambientColor);
+      hemiLight.intensity = map.ambientIntensity;
+      mainSunLight.color.setHex(map.sunColor);
+      mainSunLight.intensity = map.sunIntensity;
+
+      if (leftSideMesh) scene.remove(leftSideMesh);
+      if (rightSideMesh) scene.remove(rightSideMesh);
+      sceneryProps.forEach(p => scene.remove(p));
+      sceneryProps.length = 0;
+
+      if (map.hasOcean) {
+        const oceanMat = new THREE.MeshStandardMaterial({ color: map.oceanColor, roughness: 0.1, metalness: 0.9 });
+        leftSideMesh = new THREE.Mesh(new THREE.PlaneGeometry(250, 600), oceanMat);
+        leftSideMesh.rotation.x = -Math.PI / 2;
+        leftSideMesh.position.set(-130, -0.15, -250);
+
+        rightSideMesh = new THREE.Mesh(new THREE.PlaneGeometry(250, 600), oceanMat);
+        rightSideMesh.rotation.x = -Math.PI / 2;
+        rightSideMesh.position.set(130, -0.15, -250);
+        scene.add(leftSideMesh, rightSideMesh);
+      } else {
+        const landMat = new THREE.MeshStandardMaterial({ color: map.grassColor, roughness: 0.95 });
+        leftSideMesh = new THREE.Mesh(new THREE.PlaneGeometry(250, 600), landMat);
+        leftSideMesh.rotation.x = -Math.PI / 2;
+        leftSideMesh.position.set(-130, -0.05, -250);
+
+        rightSideMesh = new THREE.Mesh(new THREE.PlaneGeometry(250, 600), landMat);
+        rightSideMesh.rotation.x = -Math.PI / 2;
+        rightSideMesh.position.set(130, -0.05, -250);
+        scene.add(leftSideMesh, rightSideMesh);
+      }
+
+      for (let z = 0; z > -550; z -= 30) {
+        if (map.hasLamps) {
+          const leftLamp = createRealisticStreetLamp();
+          leftLamp.position.set(-6.2, 0, z);
+          const rightLamp = createRealisticStreetLamp();
+          rightLamp.position.set(6.2, 0, z);
+          rightLamp.rotation.y = Math.PI;
+          scene.add(leftLamp, rightLamp);
+          sceneryProps.push(leftLamp, rightLamp);
+        }
+        if (!map.hasOcean) {
+          const leftTree = createRealisticTree(map.treeLeaves);
+          leftTree.position.set(-9.5 - Math.random() * 8, 0, z + 12);
+          const rightTree = createRealisticTree(map.treeLeaves);
+          rightTree.position.set(9.5 + Math.random() * 8, 0, z + 12);
+          scene.add(leftTree, rightTree);
+          sceneryProps.push(leftTree, rightTree);
+        }
+      }
+    }
+
+    function buildProperCarWrapper(rawModel, targetLength = 2.4, isObstacle = false) {
+      const wrapper = new THREE.Group();
+      if (!rawModel) return wrapper;
+      rawModel.traverse((c) => {
+        if (c.isMesh) {
+          c.frustumCulled = false;
+          if (c.material) { c.material.side = THREE.DoubleSide; c.material.needsUpdate = true; }
+        }
+      });
+      rawModel.position.set(0, 0, 0);
+      rawModel.rotation.set(0, 0, 0);
+      rawModel.scale.set(1, 1, 1);
+      rawModel.updateMatrixWorld(true);
+
+      const box = new THREE.Box3().setFromObject(rawModel);
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
+
+      const maxDim = Math.max(size.x, size.y, size.z);
+      if (maxDim > 0) {
+        const scale = targetLength / maxDim;
+        rawModel.scale.set(scale, scale, scale);
+      }
+      rawModel.position.x = -center.x * rawModel.scale.x;
+      rawModel.position.y = -box.min.y * rawModel.scale.y;
+      rawModel.position.z = -center.z * rawModel.scale.z;
+      rawModel.rotation.set(0, isObstacle ? 0 : Math.PI, 0);
+      wrapper.add(rawModel);
+      return wrapper;
+    }
+
+    const playerGroup = new THREE.Group();
+    scene.add(playerGroup);
+
+    let trafficRawModel = null;
+    const trafficCars = [];
+    loader.load('traffic.glb', (gltf) => {
+      trafficRawModel = gltf.scene;
+      initTrackObstacles();
+    });
+
+    function loadPlayerCar() {
+      while (playerGroup.children.length > 0) playerGroup.remove(playerGroup.children[0]);
+      const carData = CARS_DATABASE.find(c => c.id === selectedCarId) || CARS_DATABASE[0];
+      loader.load(carData.file, (gltf) => {
+        const calibratedCar = buildProperCarWrapper(gltf.scene, 2.4, false);
+        playerGroup.add(calibratedCar);
+      });
+    }
+
+    function spawnTrafficCar(zPos, forcedLane = -1) {
+      if (!trafficRawModel) return;
+      const initialLaneIndex = forcedLane >= 0 ? forcedLane : Math.floor(Math.random() * 3);
+      const obsCar = buildProperCarWrapper(trafficRawModel.clone(true), 2.4, true);
+      obsCar.position.set(LANES[initialLaneIndex], 0, zPos);
+      
+      const r = Math.random();
+      let speedVal = 20;
+      if (r > 0.65) speedVal = 55;
+      else if (r > 0.35) speedVal = 35;
+
+      obsCar.userData = { 
+        speed: speedVal,
+        currentLaneIdx: initialLaneIndex,
+        targetX: LANES[initialLaneIndex],
+        laneChangeTimer: 1.5 + Math.random() * 3.5
+      };
+
+      scene.add(obsCar);
+      trafficCars.push(obsCar);
+    }
+
+    function initTrackObstacles() {
+      trafficCars.forEach(c => scene.remove(c));
+      trafficCars.length = 0;
+      for (let z = -30; z > -450; z -= 22) {
+        spawnTrafficCar(z);
+        if (Math.random() > 0.5) {
+          const otherLane = (Math.floor(Math.random() * 2) + 1) % 3;
+          spawnTrafficCar(z - 6, otherLane);
+        }
+      }
+    }
+
+    // --- نظام الإعدادات واختيار التحكم ---
+    function openSettings() {
+      updateSettingsUI();
+      document.getElementById('settings-modal').style.display = 'flex';
+    }
+    function closeSettings() {
+      document.getElementById('settings-modal').style.display = 'none';
+    }
+    function setControlMode(mode) {
+      controlMode = mode;
+      savePlayerData();
+      updateSettingsUI();
+      if (mode === 'tilt') requestTiltPermission();
+    }
+    function updateSettingsUI() {
+      ['buttons', 'tilt', 'wheel'].forEach(m => {
+        const opt = document.getElementById('ctrl-' + m);
+        const chk = document.getElementById('check-' + m);
+        if (controlMode === m) {
+          opt.classList.add('active');
+          chk.innerText = '✓';
+        } else {
+          opt.classList.remove('active');
+          chk.innerText = '';
+        }
+      });
+    }
+
+    // طلب إذن الجيروسكوب لهواتف iOS
+    function requestTiltPermission() {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission().then(res => {
+          if (res !== 'granted') alert('يرجى السماح بصلاحية مستشعر الحركة لتفعيل القيادة بالإمالة');
+        }).catch(console.error);
+      }
+    }
+
+    // مستشعر الجيروسكوب / الإمالة
+    window.addEventListener('deviceorientation', (e) => {
+      if (!isGameRunning || isGameOver || controlMode !== 'tilt') return;
+      let gamma = e.gamma; // درجة الإمالة لليمين واليسار (-90 إلى 90)
+      if (gamma !== null && gamma !== undefined) {
+        // حصر الإمالة وتوجيه السيارة بنعومة
+        const clampedGamma = Math.max(-30, Math.min(30, gamma));
+        targetPlayerX = (clampedGamma / 30) * 3.4;
+      }
+    });
+
+    // عجلة القيادة التفاعلية (Steering Wheel)
+    const wheelVisual = document.getElementById('wheel-visual');
+    const wheelUI = document.getElementById('steering-wheel-ui');
+    let isDraggingWheel = false;
+
+    function handleWheelTouch(e) {
+      if (!isGameRunning || isGameOver || controlMode !== 'wheel') return;
+      const touch = e.touches ? e.touches[0] : e;
+      const rect = wheelUI.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const deltaX = touch.clientX - centerX;
+      const deltaY = touch.clientY - centerY;
+      
+      let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
+      if (angle > 180) angle -= 360;
+      const clampedAngle = Math.max(-80, Math.min(80, angle));
+      
+      wheelVisual.style.transform = `rotate(${clampedAngle}deg)`;
+      targetPlayerX = (clampedAngle / 80) * 3.4;
+    }
+
+    wheelUI.addEventListener('touchstart', (e) => { isDraggingWheel = true; handleWheelTouch(e); }, { passive: true });
+    window.addEventListener('touchmove', (e) => { if (isDraggingWheel) handleWheelTouch(e); }, { passive: true });
+    window.addEventListener('touchend', () => {
+      if (isDraggingWheel) {
+        isDraggingWheel = false;
+        wheelVisual.style.transform = `rotate(0deg)`;
+        if (controlMode === 'wheel') targetPlayerX = LANES[currentLane];
+      }
+    });
+
+    // صالة العرض 3D
+    let showroomType = 'cars';
+    let showroomIndex = 0;
+    let sRenderer, sScene, sCamera, sGroup;
+
+    function initShowroom3D() {
+      const container = document.getElementById('showroom-viewport');
+      sScene = new THREE.Scene();
+      sCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+      sCamera.position.set(0, 1.8, 4.5);
+      sCamera.lookAt(0, 0.4, 0);
+
+      sRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      sRenderer.setSize(container.clientWidth, container.clientHeight);
+      sRenderer.outputEncoding = THREE.sRGBEncoding;
+      container.appendChild(sRenderer.domElement);
+
+      const sLight = new THREE.DirectionalLight(0xffffff, 2.8);
+      sLight.position.set(5, 10, 5);
+      sScene.add(sLight);
+      sScene.add(new THREE.AmbientLight(0xffffff, 1.5));
+
+      sGroup = new THREE.Group();
+      sScene.add(sGroup);
+
+      let isDragging = false, prevX = 0;
+      container.addEventListener('mousedown', (e) => { isDragging = true; prevX = e.clientX; });
+      window.addEventListener('mouseup', () => { isDragging = false; });
+      container.addEventListener('mousemove', (e) => {
+        if (isDragging && sGroup) { sGroup.rotation.y += (e.clientX - prevX) * 0.015; prevX = e.clientX; }
+      });
+      container.addEventListener('touchstart', (e) => { isDragging = true; prevX = e.touches[0].clientX; }, { passive: true });
+      window.addEventListener('touchend', () => { isDragging = false; });
+      container.addEventListener('touchmove', (e) => {
+        if (isDragging && sGroup) { sGroup.rotation.y += (e.touches[0].clientX - prevX) * 0.015; prevX = e.touches[0].clientX; }
+      }, { passive: true });
+    }
+
+    function openShowroom(type) {
+      showroomType = type;
+      document.getElementById('start-menu').style.display = 'none';
+      document.getElementById('showroom-modal').style.display = 'flex';
+      if (!sRenderer) initShowroom3D();
+
+      if (type === 'cars') {
+        document.getElementById('showroom-title').innerText = '🏎️ صالة عرض السيارات';
+        showroomIndex = CARS_DATABASE.findIndex(c => c.id === selectedCarId);
+      } else {
+        document.getElementById('showroom-title').innerText = '🌍 عوالم وبيئات السباق (10)';
+        showroomIndex = MAPS_DATABASE.findIndex(m => m.id === selectedMapId);
+      }
+      if (showroomIndex < 0) showroomIndex = 0;
+      updateShowroomView();
+    }
+
+    function closeShowroom() {
+      document.getElementById('showroom-modal').style.display = 'none';
+      document.getElementById('start-menu').style.display = 'flex';
+    }
+
+    function prevShowroomItem() {
+      const list = showroomType === 'cars' ? CARS_DATABASE : MAPS_DATABASE;
+      showroomIndex = (showroomIndex - 1 + list.length) % list.length;
+      updateShowroomView();
+    }
+    function nextShowroomItem() {
+      const list = showroomType === 'cars' ? CARS_DATABASE : MAPS_DATABASE;
+      showroomIndex = (showroomIndex + 1) % list.length;
+      updateShowroomView();
+    }
+
+    function updateShowroomView() {
+      while (sGroup.children.length > 0) sGroup.remove(sGroup.children[0]);
+      sGroup.rotation.set(0, 0, 0);
+      const infoCard = document.getElementById('item-info-card');
+
+      if (showroomType === 'cars') {
+        const car = CARS_DATABASE[showroomIndex];
+        const isOwned = unlockedCars.includes(car.id);
+        const isEquipped = selectedCarId === car.id;
+
+        loader.load(car.file, (gltf) => {
+          const m = buildProperCarWrapper(gltf.scene, 2.5, false);
+          sGroup.add(m);
+        });
+
+        infoCard.innerHTML = `
+          <h3>${car.name}</h3>
+          <p>أقصى سرعة تسارع: <b>${car.maxSpeed} كم/س</b></p>
+          <p>السعر: <b>${car.price === 0 ? 'مجانية' : car.price + ' 🪙'}</b></p>
+          ${isEquipped 
+            ? '<button class="action-btn-pill btn-active">السيارة المختارة</button>' 
+            : isOwned 
+            ? `<button class="action-btn-pill btn-select" onclick="selectShowroomCar('${car.id}')">اختيار السيارة</button>`
+            : `<button class="action-btn-pill btn-buy" onclick="buyShowroomCar('${car.id}', ${car.price})">شراء السيارة (${car.price} 🪙)</button>`}
+        `;
+      } else {
+        const map = MAPS_DATABASE[showroomIndex];
+        const isOwned = unlockedMaps.includes(map.id);
+        const isEquipped = selectedMapId === map.id;
+
+        const miniEnv = new THREE.Group();
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 32), new THREE.MeshStandardMaterial({ color: map.sky, roughness: 0.4, metalness: 0.6 }));
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.08, 16, 64), new THREE.MeshStandardMaterial({ color: map.sunColor }));
+        ring.rotation.x = Math.PI / 3;
+        miniEnv.add(sphere, ring);
+        sGroup.add(miniEnv);
+
+        infoCard.innerHTML = `
+          <h3>${map.name}</h3>
+          <p>بيئة واقعية مع إضاءة وطبيعة تفاعلية</p>
+          <p>السعر: <b>${map.price === 0 ? 'مجانية' : map.price + ' 🪙'}</b></p>
+          ${isEquipped 
+            ? '<button class="action-btn-pill btn-active">البيئة الحالية</button>' 
+            : isOwned 
+            ? `<button class="action-btn-pill btn-select" onclick="selectShowroomMap('${map.id}')">تفعيل البيئة</button>`
+            : `<button class="action-btn-pill btn-buy" onclick="buyShowroomMap('${map.id}', ${map.price})">فتح البيئة (${map.price} 🪙)</button>`}
+        `;
+      }
+    }
+
+    function buyShowroomCar(id, price) {
+      if (totalCoins >= price) {
+        totalCoins -= price;
+        unlockedCars.push(id);
+        selectedCarId = id;
+        savePlayerData();
+        loadPlayerCar();
+        updateShowroomView();
+      } else alert('الذهب غير كافٍ! واصل السباق واقطع مسافات أطول 🪙');
+    }
+    function selectShowroomCar(id) {
+      selectedCarId = id;
+      savePlayerData();
+      loadPlayerCar();
+      updateShowroomView();
+    }
+
+    function buyShowroomMap(id, price) {
+      if (totalCoins >= price) {
+        totalCoins -= price;
+        unlockedMaps.push(id);
+        selectedMapId = id;
+        savePlayerData();
+        applyMapEnvironment(id);
+        updateShowroomView();
+      } else alert('الذهب غير كافٍ! واصل السباق واقطع مسافات أطول 🪙');
+    }
+    function selectShowroomMap(id) {
+      selectedMapId = id;
+      savePlayerData();
+      applyMapEnvironment(id);
+      updateShowroomView();
+    }
+
+    function startRaceGame() {
+      document.getElementById('start-menu').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+
+      // إظهار واجهة التحكم المناسبة
+      document.getElementById('touch-buttons-ui').style.display = controlMode === 'buttons' ? 'flex' : 'none';
+      document.getElementById('steering-wheel-ui').style.display = controlMode === 'wheel' ? 'block' : 'none';
+      document.getElementById('tilt-indicator').style.display = controlMode === 'tilt' ? 'block' : 'none';
+
+      applyMapEnvironment(selectedMapId);
+      loadPlayerCar();
+      initTrackObstacles();
+
+      raceDistanceMeters = 0;
+      currentSpeed = MIN_IDLE_SPEED;
+      isAccelerating = false;
+      currentLane = 1;
+      targetPlayerX = LANES[1];
+      playerGroup.position.set(0, 0, 0);
+      playerGroup.rotation.set(0, 0, 0);
+
+      isGameRunning = true;
+      isGameOver = false;
+    }
+
+    function pressGas() { isAccelerating = true; }
+    function releaseGas() { isAccelerating = false; }
+
+    function moveLane(dir) {
+      if (!isGameRunning || isGameOver || controlMode !== 'buttons') return;
+      currentLane = Math.max(0, Math.min(2, currentLane + dir));
+      targetPlayerX = LANES[currentLane];
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLane(-1);
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveLane(1);
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') pressGas();
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') releaseGas();
+    });
+
+    let lastTime = performance.now();
+    let shakeTimer = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const now = performance.now();
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+
+      if (sGroup && document.getElementById('showroom-modal').style.display === 'flex') {
+        sGroup.rotation.y += 0.01;
+        sRenderer.render(sScene, sCamera);
+        return;
+      }
+
+      if (!isGameRunning) {
+        playerGroup.rotation.y += 0.01;
+        renderer.render(scene, camera);
+        return;
+      }
+
+      if (isGameOver) return;
+
+      const carData = CARS_DATABASE.find(c => c.id === selectedCarId) || CARS_DATABASE[0];
+
+      if (isAccelerating) {
+        currentSpeed = THREE.MathUtils.lerp(currentSpeed, carData.maxSpeed, 2.5 * dt);
+      } else {
+        currentSpeed = THREE.MathUtils.lerp(currentSpeed, MIN_IDLE_SPEED, 3.2 * dt);
+      }
+
+      document.getElementById('hud-speed').innerText = Math.round(currentSpeed);
+
+      const distanceDelta = (currentSpeed / 3.6) * dt;
+      raceDistanceMeters += distanceDelta;
+      document.getElementById('hud-distance').innerText = (raceDistanceMeters / 1000).toFixed(2);
+
+      if (roadTexture) roadTexture.offset.y -= (currentSpeed * 0.015) * dt;
+
+      shakeTimer += dt * (currentSpeed * 0.35);
+      playerGroup.position.y = Math.sin(shakeTimer) * (currentSpeed > 60 ? 0.02 : 0.01);
+
+      // توجيه سيارة اللاعب نحو الهدف
+      playerGroup.position.x += (targetPlayerX - playerGroup.position.x) * 14 * dt;
+      playerGroup.rotation.z = (playerGroup.position.x - targetPlayerX) * 0.06;
+
+      sceneryProps.forEach(prop => {
+        prop.position.z += (currentSpeed * 0.35) * dt;
+        if (prop.position.z > 20) prop.position.z -= 550;
+      });
+
+      // حركة سيارات المرور
+      for (let i = trafficCars.length - 1; i >= 0; i--) {
+        const car = trafficCars[i];
+
+        car.userData.laneChangeTimer -= dt;
+        if (car.userData.laneChangeTimer <= 0) {
+          const shift = Math.random() > 0.5 ? 1 : -1;
+          let nextLaneIdx = car.userData.currentLaneIdx + shift;
+          if (nextLaneIdx >= 0 && nextLaneIdx <= 2) {
+            car.userData.currentLaneIdx = nextLaneIdx;
+            car.userData.targetX = LANES[nextLaneIdx];
+          }
+          car.userData.laneChangeTimer = 2 + Math.random() * 4;
+        }
+
+        car.position.x += (car.userData.targetX - car.position.x) * 3.5 * dt;
+        car.rotation.y = (car.userData.targetX - car.position.x) * 0.12;
+
+        car.position.z += ((currentSpeed * 0.35) - car.userData.speed) * dt;
+
+        if (Math.abs(car.position.z - playerGroup.position.z) < 1.75 && Math.abs(car.position.x - playerGroup.position.x) < 1.05) {
+          endRace();
+          return;
+        }
+
+        if (car.position.z > 15) {
+          scene.remove(car);
+          trafficCars.splice(i, 1);
+          spawnTrafficCar(-420);
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function endRace() {
+      isGameOver = true;
+      isGameRunning = false;
+      document.getElementById('hud').style.display = 'none';
+
+      const earnedGold = Math.floor((raceDistanceMeters / 1000) * 10);
+      totalCoins += earnedGold;
+
+      if (raceDistanceMeters > bestDistanceMeters) {
+        bestDistanceMeters = raceDistanceMeters;
+      }
+      savePlayerData();
+
+      document.getElementById('result-distance').innerText = (raceDistanceMeters / 1000).toFixed(2) + ' كم';
+      document.getElementById('result-gold').innerText = `+${earnedGold} 🪙`;
+      document.getElementById('result-best').innerText = (bestDistanceMeters / 1000).toFixed(2) + ' كم';
+      document.getElementById('result-total-gold').innerText = `${totalCoins} 🪙`;
+
+      document.getElementById('game-over-screen').style.display = 'flex';
+    }
+
+    function returnToMainMenu() {
+      document.getElementById('game-over-screen').style.display = 'none';
+      document.getElementById('start-menu').style.display = 'flex';
+    }
+
+    applyMapEnvironment(selectedMapId);
+    loadPlayerCar();
+    animate();
+  </script>
+</body>
+</html>
