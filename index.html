@@ -1,195 +1,224 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Real Highway 3D: Mobile Edition</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-touch-callout: none; }
-    body { overflow: hidden; background: #030712; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; touch-action: none; color: #f8fafc; }
-    #canvas-container { width: 100vw; height: 100vh; display: block; position: fixed; inset: 0; }
+  <meta name="theme-color" content="#030712">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Real Highway 3D Mobile</title>
 
-    /* شاشات القوائم - Glassmorphism */
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3097/3097180.png">
+
+  <style>
+    * { 
+      margin: 0; padding: 0; box-sizing: border-box; 
+      user-select: none; -webkit-user-select: none; 
+      -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; 
+    }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #030712; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      touch-action: none; color: #f8fafc;
+    }
+    #canvas-container {
+      position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; z-index: 1;
+    }
+
+    /* الواجهات المتجاوبة للهواتف */
     .overlay-screen {
-      position: fixed; inset: 0;
-      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.78) 0%, rgba(3, 7, 18, 0.96) 100%);
+      position: fixed; inset: 0; width: 100vw; height: 100vh;
+      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.82) 0%, rgba(3, 7, 18, 0.98) 100%);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 15px; z-index: 50; backdrop-filter: blur(16px); padding: 20px;
+      gap: 12px; z-index: 50; backdrop-filter: blur(16px);
+      padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 20px) env(safe-area-inset-bottom, 20px) env(safe-area-inset-left, 20px);
     }
 
     .main-title {
-      font-size: 36px; font-weight: 900; letter-spacing: 2px;
+      font-size: clamp(26px, 7vw, 38px); font-weight: 900; letter-spacing: 1px;
       background: linear-gradient(135deg, #38bdf8, #818cf8, #f59e0b);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      text-align: center; text-shadow: 0 10px 30px rgba(56, 189, 248, 0.3);
-      margin-bottom: 5px;
+      text-align: center; text-shadow: 0 4px 20px rgba(56, 189, 248, 0.3);
+      margin-bottom: 2px;
     }
 
     .header-gold-pill {
-      background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.4);
-      color: #fbbf24; padding: 8px 22px; border-radius: 30px; font-size: 15px; font-weight: 800;
-      display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15);
+      background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fbbf24; padding: 6px 18px; border-radius: 25px; font-size: 14px; font-weight: 800;
+      display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15);
+      margin-bottom: 6px;
     }
 
     .menu-btn {
-      width: 270px; padding: 14px 20px; font-size: 16px; font-weight: 800;
-      border-radius: 16px; border: none; cursor: pointer; transition: 0.2s;
-      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 85%; max-width: 320px; padding: 13px 18px; font-size: clamp(14px, 4vw, 16px); font-weight: 800;
+      border-radius: 16px; border: none; cursor: pointer; transition: transform 0.15s ease;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
     }
+    .menu-btn:active { transform: scale(0.96); }
     .btn-start {
       background: linear-gradient(135deg, #0284c7, #2563eb);
-      color: #ffffff; box-shadow: 0 8px 30px rgba(37, 99, 235, 0.4);
+      color: #ffffff; box-shadow: 0 6px 25px rgba(37, 99, 235, 0.4);
     }
-    .btn-start:hover { transform: scale(1.03); }
     .btn-nav-menu {
-      background: rgba(255, 255, 255, 0.05); color: #f8fafc;
-      border: 1px solid rgba(255, 255, 255, 0.12); backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.06); color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.12); backdrop-filter: blur(8px);
     }
-    .btn-nav-menu:hover { background: rgba(255, 255, 255, 0.12); border-color: #38bdf8; }
 
-    /* صالة العرض 3D */
+    /* صالة العرض المصممة لشاشات الموبايل */
     .showroom-modal {
-      display: none; position: fixed; inset: 0;
+      display: none; position: fixed; inset: 0; width: 100vw; height: 100vh;
       background: rgba(3, 7, 18, 0.98); z-index: 100;
       flex-direction: column; align-items: center; justify-content: space-between;
-      padding: 20px; backdrop-filter: blur(30px);
+      padding: max(15px, env(safe-area-inset-top)) 15px max(15px, env(safe-area-inset-bottom)) 15px;
+      backdrop-filter: blur(25px);
     }
-    .showroom-header { display: flex; justify-content: space-between; width: 100%; max-width: 900px; align-items: center; }
-    .showroom-title { font-size: 20px; font-weight: 900; color: #38bdf8; }
+    .showroom-header { 
+      display: flex; justify-content: space-between; width: 100%; max-width: 500px; 
+      align-items: center; padding: 0 5px;
+    }
+    .showroom-title { font-size: clamp(16px, 4.5vw, 20px); font-weight: 900; color: #38bdf8; }
+    
     .showroom-viewport {
-      width: 100%; max-width: 850px; height: 48vh;
+      width: 100%; max-width: 480px; height: 42vh; min-height: 240px;
       border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1);
-      position: relative; overflow: hidden; background: radial-gradient(circle at center, #1e293b 0%, #030712 100%);
+      position: relative; overflow: hidden; 
+      background: radial-gradient(circle at center, #1e293b 0%, #030712 100%);
+      touch-action: none;
     }
 
     .carousel-controls {
-      display: flex; align-items: center; justify-content: center; gap: 15px; width: 100%; max-width: 600px;
+      display: flex; align-items: center; justify-content: center; gap: 10px; 
+      width: 100%; max-width: 480px; margin-bottom: 5px;
     }
     .arrow-btn {
-      width: 50px; height: 50px; border-radius: 50%;
-      background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #fff; font-size: 20px; font-weight: bold; cursor: pointer;
+      width: 48px; height: 48px; min-width: 48px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff; font-size: 18px; font-weight: bold; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
     }
-    .arrow-btn:hover { background: #38bdf8; border-color: #38bdf8; color: #000; }
+    .arrow-btn:active { transform: scale(0.9); background: #38bdf8; color: #000; }
 
     .item-info-card {
       background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.12);
-      padding: 12px 24px; border-radius: 18px; text-align: center; min-width: 240px;
+      padding: 10px 14px; border-radius: 16px; text-align: center; flex: 1;
     }
-    .item-info-card h3 { font-size: 17px; color: #fff; margin-bottom: 4px; }
-    .item-info-card p { font-size: 13px; color: #94a3b8; }
+    .item-info-card h3 { font-size: clamp(14px, 4vw, 16px); color: #fff; margin-bottom: 2px; }
+    .item-info-card p { font-size: clamp(11px, 3.2vw, 12px); color: #94a3b8; }
 
     .action-btn-pill {
-      padding: 9px 28px; font-size: 14px; font-weight: 800;
-      border-radius: 12px; border: none; cursor: pointer; margin-top: 8px; transition: 0.2s;
+      padding: 8px 18px; font-size: 13px; font-weight: 800;
+      border-radius: 10px; border: none; cursor: pointer; margin-top: 6px;
     }
-    .btn-buy { background: #f59e0b; color: #000; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4); }
+    .btn-buy { background: #f59e0b; color: #000; }
     .btn-select { background: #38bdf8; color: #040d1a; }
     .btn-active { background: #10b981; color: #fff; cursor: default; }
 
-    /* نافذة الإعدادات واختيار نوع التحكم */
+    /* نافذة الإعدادات للهاتف */
     #settings-modal {
       display: none; position: fixed; inset: 0;
       background: rgba(3, 7, 18, 0.95); z-index: 110;
       flex-direction: column; align-items: center; justify-content: center;
-      gap: 20px; backdrop-filter: blur(25px); padding: 20px;
+      gap: 15px; backdrop-filter: blur(20px); padding: 20px;
     }
     .settings-box {
-      background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(56, 189, 248, 0.3);
-      padding: 24px; border-radius: 24px; width: 100%; max-width: 380px;
-      display: flex; flex-direction: column; gap: 14px; text-align: center;
+      background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 20px; border-radius: 22px; width: 100%; max-width: 340px;
+      display: flex; flex-direction: column; gap: 10px; text-align: center;
     }
     .control-option {
       background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 14px; border-radius: 16px; cursor: pointer; transition: 0.2s;
-      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; border-radius: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between; font-size: 13.5px;
     }
-    .control-option.active { border-color: #38bdf8; background: rgba(56, 189, 248, 0.15); box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
-    .control-option span { font-weight: 800; font-size: 15px; }
+    .control-option.active { border-color: #38bdf8; background: rgba(56, 189, 248, 0.15); }
 
-    /* عدادات السباق أثناء اللعب */
+    /* لوحة العدادات أثناء السباق (HUD للموبايل) */
     #hud {
       display: none; position: fixed; inset: 0; pointer-events: none; z-index: 20;
     }
-    .hud-top-left {
-      position: absolute; top: 20px; left: 20px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .hud-top-right {
-      position: absolute; top: 20px; right: 20px;
-      display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+    .hud-top-bar {
+      position: absolute; top: max(15px, env(safe-area-inset-top)); 
+      left: 15px; right: 15px;
+      display: flex; justify-content: space-between; align-items: center;
     }
     .hud-badge {
       background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(12px); padding: 8px 18px; border-radius: 14px;
-      font-size: 14px; font-weight: 800;
+      backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 14px;
+      font-size: 13px; font-weight: 800;
     }
-    .hud-badge span { color: #38bdf8; font-size: 20px; }
+    .hud-badge span { color: #38bdf8; font-size: 17px; font-variant-numeric: tabular-nums; }
+
+    /* أزرار التحكم المريحة للهواتف أسفل الشاشة */
+    .mobile-controls-layer {
+      position: absolute; bottom: max(20px, env(safe-area-inset-bottom));
+      left: 15px; right: 15px;
+      display: flex; justify-content: space-between; align-items: flex-end;
+      pointer-events: none;
+    }
 
     /* دواسة التسارع */
-    .accel-container {
-      position: absolute; bottom: 25px; right: 25px; pointer-events: auto;
-    }
+    .accel-container { pointer-events: auto; }
     .accel-btn {
-      width: 85px; height: 85px; border-radius: 50%;
+      width: clamp(75px, 20vw, 88px); height: clamp(75px, 20vw, 88px); border-radius: 50%;
       background: radial-gradient(circle, #0284c7 0%, #1e293b 100%);
-      border: 2px solid #38bdf8; color: #ffffff; font-size: 14px; font-weight: 900;
+      border: 3px solid #38bdf8; color: #ffffff; font-size: 13px; font-weight: 900;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      cursor: pointer; box-shadow: 0 10px 30px rgba(2, 132, 199, 0.5); active: transform: scale(0.92);
+      cursor: pointer; box-shadow: 0 6px 20px rgba(2, 132, 199, 0.5);
     }
+    .accel-btn:active { transform: scale(0.9); }
 
-    /* 1. أزرار اللمس العادية */
+    /* 1. أزرار اللمس */
     #touch-buttons-ui {
-      display: none; position: absolute; bottom: 25px; left: 25px;
-      gap: 15px; pointer-events: auto;
+      display: none; gap: 12px; pointer-events: auto;
     }
     .touch-btn {
-      width: 70px; height: 70px; border-radius: 50%;
-      background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #fff; font-size: 26px; font-weight: bold;
+      width: clamp(65px, 18vw, 75px); height: clamp(65px, 18vw, 75px); border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.2);
+      color: #fff; font-size: 24px; font-weight: bold;
       display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);
     }
+    .touch-btn:active { background: rgba(56, 189, 248, 0.4); transform: scale(0.9); }
 
-    /* 2. دريكسيون القيادة التفاعلي */
+    /* 2. عجلة القيادة */
     #steering-wheel-ui {
-      display: none; position: absolute; bottom: 20px; left: 20px;
-      width: 120px; height: 120px; pointer-events: auto; touch-action: none;
+      display: none; width: clamp(95px, 25vw, 115px); height: clamp(95px, 25vw, 115px); 
+      pointer-events: auto; touch-action: none;
     }
     .wheel-graphic {
       width: 100%; height: 100%; border-radius: 50%;
-      border: 10px solid #475569; background: radial-gradient(circle, #1e293b 35%, #0f172a 100%);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.6), inset 0 0 15px rgba(56, 189, 248, 0.3);
-      position: relative; display: flex; align-items: center; justify-content: center;
+      border: 8px solid #475569; background: radial-gradient(circle, #1e293b 35%, #0f172a 100%);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6); position: relative;
+      display: flex; align-items: center; justify-content: center;
       transition: transform 0.05s linear;
     }
-    .wheel-spoke { position: absolute; width: 85%; height: 6px; background: #64748b; border-radius: 3px; }
-    .wheel-center { width: 34px; height: 34px; border-radius: 50%; background: #38bdf8; z-index: 2; box-shadow: 0 0 12px #38bdf8; }
+    .wheel-spoke { position: absolute; width: 85%; height: 5px; background: #64748b; border-radius: 3px; }
+    .wheel-center { width: 28px; height: 28px; border-radius: 50%; background: #38bdf8; z-index: 2; }
 
-    /* 3. تنبيه الجيروسكوب / الإمالة */
+    /* 3. مؤشر الإمالة */
     #tilt-indicator {
-      display: none; position: absolute; bottom: 30px; left: 50%;
-      transform: translateX(-50%); background: rgba(15, 23, 42, 0.8);
-      border: 1px solid #38bdf8; padding: 6px 16px; border-radius: 20px;
-      font-size: 13px; color: #38bdf8; font-weight: bold; pointer-events: none;
+      display: none; position: absolute; bottom: 25px; left: 50%;
+      transform: translateX(-50%); background: rgba(15, 23, 42, 0.85);
+      border: 1px solid #38bdf8; padding: 6px 14px; border-radius: 20px;
+      font-size: 12px; color: #38bdf8; font-weight: bold; pointer-events: none; white-space: nowrap;
     }
 
-    /* شاشة نهاية الدور */
+    /* شاشة نهاية الدور للموبايل */
     #game-over-screen {
       display: none; position: fixed; inset: 0;
-      background: rgba(3, 7, 18, 0.97); z-index: 120;
+      background: rgba(3, 7, 18, 0.98); z-index: 120;
       flex-direction: column; align-items: center; justify-content: center;
-      gap: 18px; backdrop-filter: blur(25px); text-align: center; padding: 20px;
+      gap: 14px; backdrop-filter: blur(25px); text-align: center; padding: 20px;
     }
     .result-card {
-      background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(239, 68, 68, 0.4);
-      padding: 24px 30px; border-radius: 24px; box-shadow: 0 15px 50px rgba(239, 68, 68, 0.25);
-      width: 100%; max-width: 330px; display: flex; flex-direction: column; gap: 10px;
+      background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(239, 68, 68, 0.4);
+      padding: 20px 24px; border-radius: 20px; width: 90%; max-width: 320px;
+      display: flex; flex-direction: column; gap: 8px; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2);
     }
-    .result-card h2 { color: #f87171; font-size: 26px; font-weight: 900; }
-    .result-row { display: flex; justify-content: space-between; font-size: 15px; color: #94a3b8; }
+    .result-card h2 { color: #f87171; font-size: 22px; font-weight: 900; }
+    .result-row { display: flex; justify-content: space-between; font-size: 14px; color: #94a3b8; }
     .result-row b { color: #38bdf8; font-weight: 800; }
-    .gold-gained { color: #fbbf24 !important; font-size: 18px; }
+    .gold-gained { color: #fbbf24 !important; font-size: 17px; }
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -198,7 +227,7 @@
 </head>
 <body>
 
-  <!-- القائمة الرئيسية -->
+  <!-- القائمة الرئيسية للهاتف -->
   <div id="start-menu" class="overlay-screen">
     <div class="header-gold-pill">
       <span>رصيد الذهب:</span>
@@ -213,10 +242,10 @@
     <button class="menu-btn btn-nav-menu" onclick="openSettings()">⚙️ إعدادات طريقة التحكم</button>
   </div>
 
-  <!-- نافذة إعدادات طريقة التحكم -->
+  <!-- نافذة إعدادات التحكم -->
   <div id="settings-modal">
     <div class="settings-box">
-      <h2 style="color:#38bdf8; font-size:20px;">🎮 اختر طريقة التحكم</h2>
+      <h2 style="color:#38bdf8; font-size:18px;">🎮 طريقة تحكم الموبايل</h2>
       
       <div class="control-option" id="ctrl-buttons" onclick="setControlMode('buttons')">
         <span>🔘 أزرار اللمس (يمين / يسار)</span>
@@ -233,18 +262,18 @@
         <b id="check-wheel"></b>
       </div>
 
-      <button onclick="closeSettings()" class="action-btn-pill btn-select" style="width:100%; margin-top:5px;">حفظ وتأكيد</button>
+      <button onclick="closeSettings()" class="action-btn-pill btn-select" style="width:100%; margin-top:5px; padding:10px;">حفظ وتأكيد</button>
     </div>
   </div>
 
-  <!-- صالة العرض 3D -->
+  <!-- صالة العرض 3D للموبايل -->
   <div id="showroom-modal" class="showroom-modal">
     <div class="showroom-header">
-      <div class="header-gold-pill">
-        <span>الذهب:</span> <b id="showroom-gold-display">0</b> 🪙
+      <div class="header-gold-pill" style="margin:0;">
+        <b id="showroom-gold-display">0</b> 🪙
       </div>
       <h2 id="showroom-title" class="showroom-title">صالة العرض</h2>
-      <button onclick="closeShowroom()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:6px 18px; border-radius:12px; font-weight:bold; cursor:pointer;">خروج ✕</button>
+      <button onclick="closeShowroom()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:6px 14px; border-radius:10px; font-weight:bold;">خروج ✕</button>
     </div>
 
     <div id="showroom-viewport" class="showroom-viewport"></div>
@@ -256,42 +285,41 @@
     </div>
   </div>
 
-  <!-- لوحة عدادات السباق وأدوات التحكم -->
+  <!-- لوحة عدادات السباق المجهزة للهاتف -->
   <div id="hud">
-    <div class="hud-top-left">
+    <div class="hud-top-bar">
       <div class="hud-badge">المسافة: <span id="hud-distance">0.00</span> كم</div>
-    </div>
-    <div class="hud-top-right">
       <div class="hud-badge">السرعة: <span id="hud-speed">25</span> كم/س</div>
     </div>
 
-    <!-- دواسة التسارع -->
-    <div class="accel-container">
-      <button class="accel-btn" id="accel-pedal" 
-        onmousedown="pressGas()" onmouseup="releaseGas()" 
-        ontouchstart="pressGas()" ontouchend="releaseGas()">
-        ▲ تسارع
-        <span style="font-size:11px; opacity:0.8; font-weight:bold;">GAS</span>
-      </button>
-    </div>
+    <!-- طبقة أزرار التحكم المتجاوبة للموبايل -->
+    <div class="mobile-controls-layer">
+      <!-- يسار الشاشة: نمط التوجيه المختار -->
+      <div id="touch-buttons-ui">
+        <div class="touch-btn" onclick="moveLane(-1)">◀</div>
+        <div class="touch-btn" onclick="moveLane(1)">▶</div>
+      </div>
 
-    <!-- 1. أزرار اللمس -->
-    <div id="touch-buttons-ui">
-      <div class="touch-btn" onclick="moveLane(-1)">◀</div>
-      <div class="touch-btn" onclick="moveLane(1)">▶</div>
-    </div>
+      <div id="steering-wheel-ui">
+        <div class="wheel-graphic" id="wheel-visual">
+          <div class="wheel-spoke"></div>
+          <div class="wheel-spoke" style="transform: rotate(90deg);"></div>
+          <div class="wheel-center"></div>
+        </div>
+      </div>
 
-    <!-- 2. عجلة القيادة (الدريكسيون) -->
-    <div id="steering-wheel-ui">
-      <div class="wheel-graphic" id="wheel-visual">
-        <div class="wheel-spoke"></div>
-        <div class="wheel-spoke" style="transform: rotate(90deg);"></div>
-        <div class="wheel-center"></div>
+      <!-- يمين الشاشة: دواسة التسارع للسبابة أو الإبهام -->
+      <div class="accel-container">
+        <button class="accel-btn" id="accel-pedal" 
+          onmousedown="pressGas()" onmouseup="releaseGas()" 
+          ontouchstart="pressGas()" ontouchend="releaseGas()">
+          ▲ تسارع
+          <span style="font-size:10px; opacity:0.8;">GAS</span>
+        </button>
       </div>
     </div>
 
-    <!-- 3. مؤشر الإمالة -->
-    <div id="tilt-indicator">📱 أمِل الهاتف لليمين أو اليسار للتحكم</div>
+    <div id="tilt-indicator">📱 أمِل الهاتف لليمين أو اليسار</div>
   </div>
 
   <!-- شاشة نهاية الدور -->
@@ -300,11 +328,11 @@
       <h2>💥 نهاية السباق</h2>
       <div class="result-row"><span>المسافة المقطوعة:</span> <b id="result-distance">0.00 كم</b></div>
       <div class="result-row"><span>الذهب المكتسب:</span> <b class="gold-gained" id="result-gold">+0 🪙</b></div>
-      <hr style="border-color: rgba(255,255,255,0.1); margin: 6px 0;">
-      <div class="result-row"><span>أعلى مسافة مسجلة:</span> <b id="result-best">0.00 كم</b></div>
-      <div class="result-row"><span>الذهب الكلي الحالي:</span> <b id="result-total-gold">0 🪙</b></div>
+      <hr style="border-color: rgba(255,255,255,0.1); margin: 4px 0;">
+      <div class="result-row"><span>أعلى مسافة:</span> <b id="result-best">0.00 كم</b></div>
+      <div class="result-row"><span>الذهب الكلي:</span> <b id="result-total-gold">0 🪙</b></div>
     </div>
-    <button class="menu-btn btn-start" style="width:100%; max-width:330px;" onclick="returnToMainMenu()">🏠 القائمة الرئيسية</button>
+    <button class="menu-btn btn-start" style="width:90%; max-width:320px;" onclick="returnToMainMenu()">🏠 القائمة الرئيسية</button>
   </div>
 
   <div id="canvas-container"></div>
@@ -319,13 +347,13 @@
     ];
 
     const MAPS_DATABASE = [
-      { id: 'map1', name: '1. طريق الغابة الليلي (أعمدة إنارة بيضاء)', price: 0, sky: 0x050b14, fog: 0x050b14, sunColor: 0xffffff, sunIntensity: 1.2, ambientColor: 0x1e293b, ambientIntensity: 1.0, hasOcean: false, grassColor: 0x142818, treeLeaves: 0x1e4620, hasLamps: true },
-      { id: 'map2', name: '2. الأوتوستراد الساحلي (أمواج وبحر)', price: 200, sky: 0x081b33, fog: 0x081b33, sunColor: 0x93c5fd, sunIntensity: 1.5, ambientColor: 0x0f2942, ambientIntensity: 1.2, hasOcean: true, oceanColor: 0x034078, grassColor: 0xd4a373, treeLeaves: 0x2d6a4f, hasLamps: true },
+      { id: 'map1', name: '1. طريق الغابة الليلي', price: 0, sky: 0x050b14, fog: 0x050b14, sunColor: 0xffffff, sunIntensity: 1.2, ambientColor: 0x1e293b, ambientIntensity: 1.0, hasOcean: false, grassColor: 0x142818, treeLeaves: 0x1e4620, hasLamps: true },
+      { id: 'map2', name: '2. الأوتوستراد الساحلي', price: 200, sky: 0x081b33, fog: 0x081b33, sunColor: 0x93c5fd, sunIntensity: 1.5, ambientColor: 0x0f2942, ambientIntensity: 1.2, hasOcean: true, oceanColor: 0x034078, grassColor: 0xd4a373, treeLeaves: 0x2d6a4f, hasLamps: true },
       { id: 'map3', name: '3. صباح مشمس نقي', price: 500, sky: 0x7dd3fc, fog: 0xbae6fd, sunColor: 0xfffaed, sunIntensity: 2.5, ambientColor: 0xe0f2fe, ambientIntensity: 1.8, hasOcean: false, grassColor: 0x2d6a4f, treeLeaves: 0x40916c, hasLamps: true },
       { id: 'map4', name: '4. طريق الغروب الذهبي', price: 900, sky: 0x431407, fog: 0x7c2d12, sunColor: 0xf97316, sunIntensity: 2.8, ambientColor: 0x9a3412, ambientIntensity: 1.5, hasOcean: true, oceanColor: 0x7c2d12, grassColor: 0x78350f, treeLeaves: 0x92400e, hasLamps: true },
       { id: 'map5', name: '5. عاصفة جليدية ثلجية', price: 1400, sky: 0x334155, fog: 0x64748b, sunColor: 0xf8fafc, sunIntensity: 1.4, ambientColor: 0x94a3b8, ambientIntensity: 1.6, hasOcean: false, grassColor: 0xe2e8f0, treeLeaves: 0xf1f5f9, hasLamps: true },
       { id: 'map6', name: '6. صحراء الوادي الأحمر', price: 2000, sky: 0x451a03, fog: 0x78350f, sunColor: 0xfbbf24, sunIntensity: 2.2, ambientColor: 0x92400e, ambientIntensity: 1.4, hasOcean: false, grassColor: 0xa16207, treeLeaves: 0xca8a04, hasLamps: false },
-      { id: 'map7', name: '7. طوكيو الليلية الحديثة', price: 2800, sky: 0x09090b, fog: 0x18181b, sunColor: 0x38bdf8, sunIntensity: 1.6, ambientColor: 0x27272a, ambientIntensity: 1.2, hasOcean: false, grassColor: 0x18181b, treeLeaves: 0x38bdf8, hasLamps: true },
+      { id: 'map7', name: '7. طوكيو الليلية', price: 2800, sky: 0x09090b, fog: 0x18181b, sunColor: 0x38bdf8, sunIntensity: 1.6, ambientColor: 0x27272a, ambientIntensity: 1.2, hasOcean: false, grassColor: 0x18181b, treeLeaves: 0x38bdf8, hasLamps: true },
       { id: 'map8', name: '8. وادي الخريف الذهبي', price: 3800, sky: 0x312e81, fog: 0x4338ca, sunColor: 0xf59e0b, sunIntensity: 2.0, ambientColor: 0x4f46e5, ambientIntensity: 1.4, hasOcean: false, grassColor: 0x7c2d12, treeLeaves: 0xd97706, hasLamps: true },
       { id: 'map9', name: '9. أوتوستراد المطر والضباب', price: 5000, sky: 0x0f172a, fog: 0x1e293b, sunColor: 0x94a3b8, sunIntensity: 1.0, ambientColor: 0x334155, ambientIntensity: 1.5, hasOcean: true, oceanColor: 0x0f172a, grassColor: 0x1e293b, treeLeaves: 0x334155, hasLamps: true },
       { id: 'map10', name: '10. الشفق القطبي الساحر 🌌', price: 7500, sky: 0x022c22, fog: 0x064e3b, sunColor: 0x34d399, sunIntensity: 2.2, ambientColor: 0x047857, ambientIntensity: 1.6, hasOcean: true, oceanColor: 0x064e3b, grassColor: 0x064e3b, treeLeaves: 0x6ee7b7, hasLamps: true }
@@ -335,9 +363,7 @@
     let currentLane = 1;
     let targetPlayerX = 0;
 
-    // نمط التحكم: 'buttons' أو 'tilt' أو 'wheel'
     let controlMode = localStorage.getItem('rh_control_mode') || 'buttons';
-
     let unlockedCars = JSON.parse(localStorage.getItem('rh_unlocked_cars')) || ['car1'];
     let selectedCarId = localStorage.getItem('rh_selected_car') || 'car1';
     let unlockedMaps = JSON.parse(localStorage.getItem('rh_unlocked_maps')) || ['map1'];
@@ -365,18 +391,36 @@
     let currentSpeed = MIN_IDLE_SPEED;
     let raceDistanceMeters = 0;
 
-    // --- إعداد المشهد ثلاثي الأبعاد ---
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 2.6, 5.8);
+    const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    // ضبط كاميرا السباق بناءً على شاشات الهواتف الطولية
+    function updateCameraForDevice() {
+      const isPortrait = window.innerHeight > window.innerWidth;
+      if (isPortrait) {
+        camera.fov = 75; // توسيع الرؤية لشاشات الموبايل الرأسية
+        camera.position.set(0, 3.2, 6.8);
+      } else {
+        camera.fov = 58;
+        camera.position.set(0, 2.6, 5.8);
+      }
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    }
+    updateCameraForDevice();
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.25;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    window.addEventListener('resize', () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      updateCameraForDevice();
+    });
 
     const loader = new THREE.GLTFLoader();
     const dracoLoader = new THREE.DRACOLoader();
@@ -396,7 +440,7 @@
       ctx.fillStyle = '#1c1e22';
       ctx.fillRect(0, 0, 1024, 1024);
 
-      for (let i = 0; i < 25000; i++) {
+      for (let i = 0; i < 20000; i++) {
         const c = Math.floor(22 + Math.random() * 20);
         ctx.fillStyle = `rgb(${c},${c},${c})`;
         ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2);
@@ -603,7 +647,6 @@
       }
     }
 
-    // --- نظام الإعدادات واختيار التحكم ---
     function openSettings() {
       updateSettingsUI();
       document.getElementById('settings-modal').style.display = 'flex';
@@ -631,7 +674,6 @@
       });
     }
 
-    // طلب إذن الجيروسكوب لهواتف iOS
     function requestTiltPermission() {
       if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission().then(res => {
@@ -640,18 +682,15 @@
       }
     }
 
-    // مستشعر الجيروسكوب / الإمالة
     window.addEventListener('deviceorientation', (e) => {
       if (!isGameRunning || isGameOver || controlMode !== 'tilt') return;
-      let gamma = e.gamma; // درجة الإمالة لليمين واليسار (-90 إلى 90)
+      let gamma = e.gamma;
       if (gamma !== null && gamma !== undefined) {
-        // حصر الإمالة وتوجيه السيارة بنعومة
-        const clampedGamma = Math.max(-30, Math.min(30, gamma));
-        targetPlayerX = (clampedGamma / 30) * 3.4;
+        const clampedGamma = Math.max(-28, Math.min(28, gamma));
+        targetPlayerX = (clampedGamma / 28) * 3.3;
       }
     });
 
-    // عجلة القيادة التفاعلية (Steering Wheel)
     const wheelVisual = document.getElementById('wheel-visual');
     const wheelUI = document.getElementById('steering-wheel-ui');
     let isDraggingWheel = false;
@@ -670,7 +709,7 @@
       const clampedAngle = Math.max(-80, Math.min(80, angle));
       
       wheelVisual.style.transform = `rotate(${clampedAngle}deg)`;
-      targetPlayerX = (clampedAngle / 80) * 3.4;
+      targetPlayerX = (clampedAngle / 80) * 3.3;
     }
 
     wheelUI.addEventListener('touchstart', (e) => { isDraggingWheel = true; handleWheelTouch(e); }, { passive: true });
@@ -683,7 +722,6 @@
       }
     });
 
-    // صالة العرض 3D
     let showroomType = 'cars';
     let showroomIndex = 0;
     let sRenderer, sScene, sCamera, sGroup;
@@ -691,8 +729,8 @@
     function initShowroom3D() {
       const container = document.getElementById('showroom-viewport');
       sScene = new THREE.Scene();
-      sCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-      sCamera.position.set(0, 1.8, 4.5);
+      sCamera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 100);
+      sCamera.position.set(0, 1.9, 4.4);
       sCamera.lookAt(0, 0.4, 0);
 
       sRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -709,11 +747,6 @@
       sScene.add(sGroup);
 
       let isDragging = false, prevX = 0;
-      container.addEventListener('mousedown', (e) => { isDragging = true; prevX = e.clientX; });
-      window.addEventListener('mouseup', () => { isDragging = false; });
-      container.addEventListener('mousemove', (e) => {
-        if (isDragging && sGroup) { sGroup.rotation.y += (e.clientX - prevX) * 0.015; prevX = e.clientX; }
-      });
       container.addEventListener('touchstart', (e) => { isDragging = true; prevX = e.touches[0].clientX; }, { passive: true });
       window.addEventListener('touchend', () => { isDragging = false; });
       container.addEventListener('touchmove', (e) => {
@@ -771,8 +804,7 @@
 
         infoCard.innerHTML = `
           <h3>${car.name}</h3>
-          <p>أقصى سرعة تسارع: <b>${car.maxSpeed} كم/س</b></p>
-          <p>السعر: <b>${car.price === 0 ? 'مجانية' : car.price + ' 🪙'}</b></p>
+          <p>أقصى سرعة: <b>${car.maxSpeed} كم/س</b> | السعر: <b>${car.price === 0 ? 'مجانية' : car.price + ' 🪙'}</b></p>
           ${isEquipped 
             ? '<button class="action-btn-pill btn-active">السيارة المختارة</button>' 
             : isOwned 
@@ -793,7 +825,6 @@
 
         infoCard.innerHTML = `
           <h3>${map.name}</h3>
-          <p>بيئة واقعية مع إضاءة وطبيعة تفاعلية</p>
           <p>السعر: <b>${map.price === 0 ? 'مجانية' : map.price + ' 🪙'}</b></p>
           ${isEquipped 
             ? '<button class="action-btn-pill btn-active">البيئة الحالية</button>' 
@@ -842,7 +873,6 @@
       document.getElementById('start-menu').style.display = 'none';
       document.getElementById('hud').style.display = 'block';
 
-      // إظهار واجهة التحكم المناسبة
       document.getElementById('touch-buttons-ui').style.display = controlMode === 'buttons' ? 'flex' : 'none';
       document.getElementById('steering-wheel-ui').style.display = controlMode === 'wheel' ? 'block' : 'none';
       document.getElementById('tilt-indicator').style.display = controlMode === 'tilt' ? 'block' : 'none';
@@ -871,15 +901,6 @@
       currentLane = Math.max(0, Math.min(2, currentLane + dir));
       targetPlayerX = LANES[currentLane];
     }
-
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLane(-1);
-      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveLane(1);
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') pressGas();
-    });
-    window.addEventListener('keyup', (e) => {
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') releaseGas();
-    });
 
     let lastTime = performance.now();
     let shakeTimer = 0;
@@ -923,7 +944,6 @@
       shakeTimer += dt * (currentSpeed * 0.35);
       playerGroup.position.y = Math.sin(shakeTimer) * (currentSpeed > 60 ? 0.02 : 0.01);
 
-      // توجيه سيارة اللاعب نحو الهدف
       playerGroup.position.x += (targetPlayerX - playerGroup.position.x) * 14 * dt;
       playerGroup.rotation.z = (playerGroup.position.x - targetPlayerX) * 0.06;
 
@@ -932,7 +952,6 @@
         if (prop.position.z > 20) prop.position.z -= 550;
       });
 
-      // حركة سيارات المرور
       for (let i = trafficCars.length - 1; i >= 0; i--) {
         const car = trafficCars[i];
 
